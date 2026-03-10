@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: Params) {
 
   const { data: team } = await supabase
     .from('teams')
-    .select('*')
+    .select('id, team_name')
     .eq('id', id)
     .single();
 

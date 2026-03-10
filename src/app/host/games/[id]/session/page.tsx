@@ -43,7 +43,7 @@ export default async function SessionPage({ params }: Props) {
   // Check for an existing active/waiting session for this game
   const { data: existingSession, error: sessionError } = await supabase
     .from('game_sessions')
-    .select('*')
+    .select('id, game_id, room_code, status, current_round_index, current_question_index, created_at, host_id')
     .eq('game_id', gameId)
     .in('status', ['waiting', 'active'])
     .order('created_at', { ascending: false })

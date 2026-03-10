@@ -137,13 +137,26 @@ Return 1-3 categories as a comma-separated list. No explanations.`
 export async function POST(req: Request) {
   console.log('[Round Generate] Starting request');
   
-  const authResult = await authenticateHost();
-  if (isErrorResponse(authResult)) {
-    console.log('[Round Generate] Unauthorized - authentication failed');
-    return authResult;
-  }
-  const [hostId, supabase, serviceClient] = authResult;
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
+  if (authError || !user) {
+    console.log('[Round Generate] Unauthorized - no user');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { data: hostData } = (await supabase
+    .from('hosts')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle()) as { data: { id: string } | null };
+
+  if (!hostData) {
+    console.log('[Round Generate] Unauthorized - not a host');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const hostId = hostData.id;
   console.log('[Round Generate] Host authenticated:', hostId);
 
   const body = await req.json();
@@ -198,7 +211,7 @@ export async function POST(req: Request) {
       
       const { data: fallback, error: fallbackError } = await serviceClient
         .from('questions')
-        .select('*')
+        .select('id, question_text, answer, category, subcategory, difficulty, tags, source, source_year')
         .or(categoryVariations.map(cat => `category.ilike.%${cat}%`).join(','))
         .order('id', { ascending: false })  // Get newer questions first
         .limit(question_count * 10);  // Get more candidates for variety
@@ -232,7 +245,7 @@ export async function POST(req: Request) {
       
       const { data: fallback, error: fallbackError } = await serviceClient
         .from('questions')
-        .select('*')
+        .select('id, question_text, answer, category, subcategory, difficulty, tags, source, source_year')
         .or(categoryVariations.map(cat => `category.ilike.%${cat}%`).join(','))
         .order('id', { ascending: false })  // Get newer questions first
         .limit(question_count * 10);  // Get more candidates for variety
@@ -254,7 +267,7 @@ export async function POST(req: Request) {
     // pgvector similarity search via RPC
     console.log('[Round Generate] Calling match_questions RPC');
     const { data: similar, error: rpcError } = await serviceClient.rpc('match_questions', {
-      query_embedding: embedding,
+      query_embedding: embedding as unknown as string,
       match_count: question_count * 3,
     });
 
@@ -264,7 +277,7 @@ export async function POST(req: Request) {
       console.log('[Round Generate] Using tags fallback search');
       const { data: fallback, error: fallbackError } = await serviceClient
         .from('questions')
-        .select('*')
+        .select('id, question_text, answer, category, subcategory, difficulty, tags, source, source_year')
         .or(`category.ilike.%${topic}%,tags.cs.{${topic}}`)
         .limit(question_count * 2);
       
@@ -293,7 +306,7 @@ export async function POST(req: Request) {
     console.warn('[Round Generate] ⚠️ Falling back to random questions to reach', question_count, 'total');
     const { data: extra, error: extraError } = await serviceClient
       .from('questions')
-      .select('*')
+      .select('id, question_text, answer, category, subcategory, difficulty, tags, source, source_year')
       .order('id', { ascending: false })  // Get newer questions
       .limit(question_count * 10);
 

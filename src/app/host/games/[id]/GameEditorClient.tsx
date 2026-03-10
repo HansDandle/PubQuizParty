@@ -20,6 +20,27 @@ export default function GameEditorClient({ game }: Props) {
     [...game.rounds].sort((a, b) => a.round_number - b.round_number)
   );
   const [saving, setSaving] = useState(false);
+  const [draggedItem, setDraggedItem] = useState<{ roundId: string; rqId: string } | null>(null);
+
+  function reorderQuestions(roundId: string, fromIndex: number, toIndex: number) {
+    setRounds((prev) =>
+      prev.map((r) => {
+        if (r.id !== roundId) return r;
+        
+        const sorted = [...r.round_questions].sort((a, b) => a.order_index - b.order_index);
+        const [moved] = sorted.splice(fromIndex, 1);
+        sorted.splice(toIndex, 0, moved);
+        
+        // Update order_index for all questions in the round
+        const reordered = sorted.map((rq, idx) => ({
+          ...rq,
+          order_index: idx,
+        }));
+        
+        return { ...r, round_questions: reordered };
+      })
+    );
+  }
 
   function removeQuestion(roundId: string, rqId: string) {
     setRounds((prev) =>
@@ -79,33 +100,67 @@ export default function GameEditorClient({ game }: Props) {
           <div className="space-y-2">
             {round.round_questions
               .sort((a, b) => a.order_index - b.order_index)
-              .map((rq, qi) => (
-                <div
-                  key={rq.id}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-[var(--secondary)] group"
-                >
-                  <span className="text-[var(--muted-foreground)] text-sm w-5 shrink-0 mt-0.5">
-                    {qi + 1}.
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm">{rq.questions.question_text}</p>
-                    <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                      Answer: <span className="text-green-400">{rq.questions.answer}</span>
-                      {' · '}
-                      {rq.questions.category}
-                      {' · '}
-                      {difficultyLabel(rq.questions.difficulty)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => removeQuestion(round.id, rq.id)}
-                    className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 text-xs transition-opacity shrink-0"
-                    title="Remove question"
+              .map((rq, qi) => {
+                const isDragging = draggedItem?.rqId === rq.id;
+                return (
+                  <div
+                    key={rq.id}
+                    draggable
+                    onDragStart={(e) => {
+                      setDraggedItem({ roundId: round.id, rqId: rq.id });
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.currentTarget.style.opacity = '0.5';
+                    }}
+                    onDragEnd={(e) => {
+                      setDraggedItem(null);
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (!draggedItem || draggedItem.roundId !== round.id) return;
+                      
+                      const sortedQuestions = [...round.round_questions].sort((a, b) => a.order_index - b.order_index);
+                      const fromIndex = sortedQuestions.findIndex(q => q.id === draggedItem.rqId);
+                      const toIndex = qi;
+                      
+                      if (fromIndex !== toIndex) {
+                        reorderQuestions(round.id, fromIndex, toIndex);
+                      }
+                    }}
+                    className={`flex items-start gap-3 p-3 rounded-lg bg-[var(--secondary)] group cursor-move transition-opacity ${
+                      isDragging ? 'opacity-50' : ''
+                    }`}
                   >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    <span className="text-[var(--muted-foreground)] text-sm shrink-0 mt-0.5 select-none">
+                      ⋮⋮
+                    </span>
+                    <span className="text-[var(--muted-foreground)] text-sm w-5 shrink-0 mt-0.5">
+                      {qi + 1}.
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">{rq.questions.question_text}</p>
+                      <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                        Answer: <span className="text-green-400">{rq.questions.answer}</span>
+                        {' · '}
+                        {rq.questions.category}
+                        {' · '}
+                        {difficultyLabel(rq.questions.difficulty)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => removeQuestion(round.id, rq.id)}
+                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 text-xs transition-opacity shrink-0"
+                      title="Remove question"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
           </div>
 
           <p className="text-xs text-[var(--muted-foreground)]">

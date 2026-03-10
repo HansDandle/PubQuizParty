@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import type { SeasonScore, Team } from '@/lib/supabase/types';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -13,7 +12,7 @@ export default async function SeasonLeaderboardPage({ params }: Props) {
 
   const { data: season } = await supabase
     .from('seasons')
-    .select('*')
+    .select('id, name, start_date, end_date')
     .eq('id', id)
     .single();
   const seasonRecord = season as { name: string } | null;
@@ -22,7 +21,7 @@ export default async function SeasonLeaderboardPage({ params }: Props) {
 
   const { data: scores } = await supabase
     .from('season_scores')
-    .select('*, team:teams(*)')
+    .select('id, season_id, team_id, points, games_played, wins, team:teams(id, team_name, avatar_emoji)')
     .eq('season_id', id)
     .order('points', { ascending: false });
 
@@ -41,7 +40,7 @@ export default async function SeasonLeaderboardPage({ params }: Props) {
           </div>
         ) : (
           <div className="space-y-3">
-            {scores.map((entry: SeasonScore & { team: Team }, i) => (
+            {scores.map((entry: any, i: number) => (
               <div
                 key={entry.id}
                 className={`flex items-center gap-4 p-4 rounded-xl ${

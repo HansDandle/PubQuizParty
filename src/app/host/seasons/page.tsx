@@ -18,7 +18,7 @@ export default async function SeasonsPage() {
 
   const { data: seasons } = await supabase
     .from('seasons')
-    .select('*')
+    .select('id, name, start_date, end_date, host_id')
     .eq('host_id', hostRecord.id)
     .order('start_date', { ascending: false });
 

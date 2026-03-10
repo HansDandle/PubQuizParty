@@ -86,7 +86,7 @@ serve(async (req: Request) => {
     if (candidateMap.size < question_count) {
       const { data: extras } = await supabase
         .from('questions')
-        .select('*')
+        .select('id, question_text, answer, category, subcategory, difficulty, tags, source, source_year')
         .not('id', 'in', `(${[...excludeSet].join(',') || 'null'})`)
         .limit(question_count * 2);
 

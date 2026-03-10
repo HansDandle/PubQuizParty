@@ -13,7 +13,7 @@ export async function GET() {
 
   const { data: templates, error } = await db
     .from('game_templates')
-    .select('*')
+    .select('id, name, round_count, default_timer_seconds, auto_advance, allow_confidence_scoring, allow_wager_round, allow_double_round, created_at')
     .eq('host_id', hostId)
     .order('created_at', { ascending: false });
 

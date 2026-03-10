@@ -150,7 +150,7 @@ export default function SessionControlClient({ game, hostId, existingSession }: 
   async function loadAnswers(sessionId: string) {
     const { data } = await supabase
       .from('answers')
-      .select('*')
+      .select('id, team_id, question_id, answer_text, confidence_rank, correct, points_awarded, wager_amount')
       .eq('game_session_id', sessionId);
     if (data) setAnswers(data);
   }

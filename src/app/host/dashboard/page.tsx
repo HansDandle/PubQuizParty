@@ -11,7 +11,7 @@ export default async function HostDashboard() {
 
   const { data: host } = await supabase
     .from('hosts')
-    .select('*')
+    .select('id, display_name')
     .eq('user_id', user.id)
     .single();
   const hostRecord = host as { id: string; display_name: string } | null;
@@ -22,17 +22,17 @@ export default async function HostDashboard() {
     await Promise.all([
       supabase
         .from('game_templates')
-        .select('*')
+        .select('id, name, round_count, default_timer_seconds, created_at')
         .order('created_at', { ascending: false })
         .limit(10),
       supabase
         .from('games')
-        .select('*')
+        .select('id, title, created_at')
         .order('created_at', { ascending: false })
         .limit(5),
       supabase
         .from('game_sessions')
-        .select('*')
+        .select('id, game_id, room_code, status, created_at')
         .eq('status', 'active')
         .order('created_at', { ascending: false }),
     ]);
@@ -181,7 +181,7 @@ export default async function HostDashboard() {
                     <div>
                       <p className="font-semibold">{game.title}</p>
                       <p className="text-sm text-[var(--secondary-foreground)] mt-0.5">
-                        {new Date(game.created_at).toLocaleDateString()}
+                        {new Date(game.created_at ?? new Date()).toLocaleDateString()}
                       </p>
                     </div>
                     <span className="text-[var(--muted-foreground)] group-hover:text-green-400 transition-colors">

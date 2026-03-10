@@ -12,7 +12,7 @@ export default async function TeamStatsPage({ params }: Props) {
 
   const { data: team } = await supabase
     .from('teams')
-    .select('*')
+    .select('id, team_name')
     .eq('id', id)
     .single();
   const teamRecord = team as { team_name: string } | null;
@@ -22,12 +22,12 @@ export default async function TeamStatsPage({ params }: Props) {
   const [{ data: stats }, { data: results }] = await Promise.all([
     supabase
       .from('team_category_stats')
-      .select('*')
+      .select('id, team_id, category, accuracy_rate, questions_seen, correct_answers')
       .eq('team_id', id)
       .order('questions_seen', { ascending: false }),
     supabase
       .from('team_game_results')
-      .select('*')
+      .select('id, team_id, score, rank, created_at')
       .eq('team_id', id)
       .order('created_at', { ascending: false })
       .limit(10),
